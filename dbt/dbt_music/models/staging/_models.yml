@@ -1,0 +1,53 @@
+version: 2
+
+# STAGING layer: one stg_ per bv_, cast + rename, no logic.
+# These views are NOT exposed: no consumer role has access to this database.
+#
+# Tests: `unique` / `not_null` on every key, and `relationships` on every foreign key.
+# Denodo declares no foreign key on a CSV (or on most sources): these tests are what
+# proves, on every build, that a track points to an existing album, an album to an
+# artist, an artist to a label.
+
+models:
+  - name: stg_track
+    description: "chinook_music_staging.stg_track - plain cast of bv_track."
+    columns:
+      - name: track_id
+        data_tests: [unique, not_null]
+      - name: album_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_album')
+                field: album_id
+
+  - name: stg_album
+    description: "chinook_music_staging.stg_album - plain cast of bv_album."
+    columns:
+      - name: album_id
+        data_tests: [unique, not_null]
+      - name: artist_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_artist')
+                field: artist_id
+
+  - name: stg_artist
+    description: "chinook_music_staging.stg_artist - plain cast of bv_artist."
+    columns:
+      - name: artist_id
+        data_tests: [unique, not_null]
+      - name: label_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_label')
+                field: label_id
+
+  - name: stg_label
+    description: "chinook_music_staging.stg_label - plain cast of bv_label."
+    columns:
+      - name: label_id
+        data_tests: [unique, not_null]

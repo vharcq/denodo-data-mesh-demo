@@ -1,0 +1,65 @@
+version: 2
+
+# GOLD layer: what the data product PUBLISHES.
+#
+# Governance: Denodo tags are declared HERE, under `config: tags:`, on the view as well
+# as on the columns. The `denodo_apply_tags` hook (dbt_project.yml, marts level) applies
+# them after every build, and DETACHES the ones removed from here.
+# /!\ Always under `config:`: at MODEL level, a bare `tags:` property is silently
+# ignored by dbt (measured: the DENY on iv_sales went away without any error).
+# `contract: enforced: true` = schema check (dbt-core): dbt compares the columns produced
+# by the SELECT with the ones declared here BEFORE replacing the view. A published column
+# that disappears breaks the build HERE, at the producer. Columns are checked, types are
+# not (measured on dbt-denodo 1.0.0).
+
+models:
+  - name: iv_sales
+    description: "Sales detail across products: one row per invoice line, with the customer (Sales data product) and the track, label, price and cost (Music data product). Published by the Analytics data product."
+    config:
+      tags: [class_confidential]
+      contract:
+        enforced: true
+    columns:
+      - name: invoice_id
+        data_type: integer
+        description: "Invoice identifier."
+        data_tests: [not_null]
+      - name: customer_id
+        data_type: integer
+        description: "Identifier of the customer who was invoiced."
+      - name: customer_name
+        data_type: varchar
+        description: "Full name of the customer."
+      - name: track_title
+        data_type: varchar
+        description: "Title of the track sold."
+      - name: label_id
+        data_type: integer
+        description: "Identifier of the record label of the track."
+      - name: label_name
+        data_type: varchar
+        description: "Name of the record label of the track."
+      - name: unit_price
+        data_type: decimal
+        description: "Selling price of one unit of the track, in euros."
+      - name: cost_price
+        data_type: decimal
+        description: "Purchase cost of one unit of the track, in euros. Confidential."
+      - name: quantity
+        data_type: integer
+        description: "Number of units sold on the invoice line."
+        data_tests: [not_null]
+
+  - name: agg_sales_by_label
+    description: "Sales summary per record label: units sold, revenue and margin. Materialized in the Denodo cache (CACHE FULL), refreshed by dbt. Published by the Analytics data product."
+    columns:
+      - name: label_name
+        description: "Name of the record label. Unique."
+        data_tests: [unique, not_null]
+      - name: units_sold
+        description: "Total number of units sold for the label."
+      - name: revenue
+        description: "Total revenue for the label, in euros: sum of quantity x unit price."
+        data_tests: [not_null]
+      - name: margin
+        description: "Total margin for the label, in euros: revenue minus purchase cost."

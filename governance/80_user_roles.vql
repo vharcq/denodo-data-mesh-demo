@@ -1,0 +1,16 @@
+-- AFTER dbt: applied by `python run_demo.py --post`.
+--
+-- The business roles are created by `dbt build` (declared in `vars: denodo: security:`
+-- of each project). The user -> role assignment therefore cannot happen before: it is
+-- the only side effect of splitting the work between VQL and dbt, and it is deliberate.
+--
+-- dbt does NOT manage this link: users are people (often from LDAP / Active Directory),
+-- not data product objects.
+CONNECT DATABASE admin;
+
+ALTER USER buyer_blue    GRANT ROLE buyer;
+ALTER USER buyer_red     GRANT ROLE buyer;
+ALTER USER rep_alice     GRANT ROLE sales_rep;
+ALTER USER rep_ben       GRANT ROLE sales_rep;
+ALTER USER analyst_bob   GRANT ROLE analyst;
+ALTER USER support_sarah GRANT ROLE customer_support;

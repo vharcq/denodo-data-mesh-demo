@@ -1,0 +1,24 @@
+# One profile for the three data products. No credentials here: dbt reads them from
+# the environment. `python run_demo.py --dbt` fills it from demo.env; to run dbt by
+# hand, export VDP_HOST, VDP_ODBC_PORT, VDP_USER and VDP_PASS first.
+#
+# Port 9996, not 9999: the dbt-denodo adapter speaks the PostgreSQL wire protocol
+# (psycopg2), not JDBC.
+denodo:
+  target: demo
+  outputs:
+    demo:
+      type: denodo
+      host: "{{ env_var('VDP_HOST') }}"
+      port: "{{ env_var('VDP_ODBC_PORT') | int }}"
+      username: "{{ env_var('VDP_USER') }}"
+      password: "{{ env_var('VDP_PASS') }}"
+      # Connection database only: each model picks its own database through
+      # `+database` in dbt_project.yml.
+      database: admin
+      # `schema` must name an existing database, otherwise `dbt docs generate`
+      # returns an empty catalog.
+      schema: admin
+      threads: 1
+      auth_type: basic
+      sslmode: prefer

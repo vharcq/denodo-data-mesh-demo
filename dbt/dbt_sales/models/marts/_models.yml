@@ -1,0 +1,86 @@
+version: 2
+
+# GOLD layer: what the data product PUBLISHES.
+#
+# Governance: Denodo tags are declared HERE, under `config: tags:`, on the view as well
+# as on the columns. The `denodo_apply_tags` hook (dbt_project.yml, marts level) applies
+# them after every build, and DETACHES the ones removed from here.
+# /!\ Always under `config:`: at MODEL level, a bare `tags:` property is silently
+# ignored by dbt (measured: the DENY on iv_sales went away without any error).
+# `contract: enforced: true` = schema check (dbt-core): dbt compares the columns produced
+# by the SELECT with the ones declared here BEFORE replacing the view. A published column
+# that disappears breaks the build HERE, at the producer. Columns are checked, types are
+# not (measured on dbt-denodo 1.0.0).
+
+models:
+  - name: iv_invoices
+    description: "Invoices with their customer: one row per invoice. Published by the Sales data product."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: invoice_id
+        data_type: integer
+        description: "Invoice identifier. Unique."
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_type: integer
+        description: "Identifier of the customer who was invoiced."
+        config:
+          tags: [scope_customer]
+      - name: customer_name
+        data_type: varchar
+        description: "Full name of the customer."
+      - name: email
+        data_type: varchar
+        description: "E-mail address of the customer. Personal data."
+        config:
+          tags: [class_pii]
+
+  - name: iv_invoice_line
+    description: "Invoice lines: one row per track sold on an invoice, with the quantity. Published by the Sales data product."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: line_id
+        data_type: integer
+        description: "Invoice line identifier. Unique."
+        data_tests: [unique, not_null]
+      - name: invoice_id
+        data_type: integer
+        description: "Invoice the line belongs to."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('iv_invoices')
+                field: invoice_id
+      - name: track_id
+        data_type: integer
+        description: "Track sold. Refers to iv_catalog.track_id of the Music data product."
+      - name: quantity
+        data_type: integer
+        description: "Number of units of the track sold on this line."
+
+  - name: be_customer
+    description: "Customer business entity: one row per customer who bought at least once, with identity and purchasing activity. Published by the Sales data product."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: customer_id
+        data_type: integer
+        description: "Customer identifier. Unique."
+        data_tests: [unique, not_null]
+      - name: customer_name
+        data_type: varchar
+        description: "Full name of the customer."
+      - name: email
+        data_type: varchar
+        description: "E-mail address of the customer. Personal data."
+      - name: invoice_count
+        data_type: bigint
+        description: "Number of invoices of the customer."
+      - name: units_bought
+        data_type: bigint
+        description: "Total number of track units bought by the customer, all invoices together."

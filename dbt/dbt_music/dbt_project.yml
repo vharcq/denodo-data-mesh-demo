@@ -1,0 +1,98 @@
+# Data product MUSIC: 2 databases, chinook_music_staging (raw) + chinook_music (gold).
+# An independent project: it knows no other data product.
+name: chinook_music
+version: "1.0.0"
+config-version: 2
+
+profile: denodo
+
+# Macros shared by the 3 projects, read from the dbt-denodo-extras repository cloned
+# NEXT TO this one (../../../ = the folder holding both clones). `macro-paths` lists
+# the folders where dbt looks for macros: these files count as this project's own.
+# Not a dbt package on purpose: dbt silently ignores a materialization or a
+# `generate_*_name` that comes from a package.
+macro-paths: ["../../../dbt-denodo-extras/macros"]
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Everything Denodo-specific lives under one namespace, so that the project's other
+  # vars stay readable next to it.
+  denodo:
+
+    # VQL folders. Numbered convention of the project: 10/20 are created by the VQL
+    # (datasources, base views), dbt writes into 30/40/50.
+    # /!\ `var()` CANNOT be resolved in this file (dbt renders it before loading its
+    # vars): the folder is set in the config() of each model.
+    folders:
+      integration:       "/30 Integration views"
+      business_entities: "/40 Business Entities"
+      reporting:         "/50 Reporting Views"
+
+    # Governance tags dbt is allowed to manage (whitelist). See
+    # denodo_custom_macros.sql -> denodo_apply_tags: it FILTERS (dbt `tags` are selectors
+    # first) and makes CONVERGENCE possible (a tag removed from the YAML is really
+    # detached). The tags themselves are created in VQL (governance/20_tags.vql).
+    governance_tags:
+      - class_cost
+      - scope_label
+      - scope_customer
+      - class_pii
+      - class_confidential
+
+    # DATABASE <-> ROLE. Role-centric: a role covers BOTH databases of the product and
+    # carries its memberships. See denodo_custom_macros.sql -> denodo_apply_roles.
+    # What dbt does NOT manage: users, and the user -> role link.
+    security:
+
+      chinook_music_developer:
+        description: "Developer of the Music data product"
+        privileges:
+          # METADATA without EXECUTE: the developer sees lineage and plans, NOT the data.
+          chinook_music_staging: [CONNECT, METADATA]
+          chinook_music:         [CONNECT, METADATA]
+        granted_to: [denodo_developer_global]
+
+      # Consumer roles of the demo: each one only gets what THIS product publishes.
+      buyer:
+        description: "Buyer: full catalogue, cost masked outside their own labels"
+        privileges:
+          chinook_music: [CONNECT, EXECUTE]
+
+      analyst:
+        description: "BI analyst"
+        privileges:
+          chinook_music: [CONNECT, EXECUTE]
+
+      sales_rep:
+        description: "Sales rep"
+        privileges:
+          chinook_music: [CONNECT, EXECUTE]
+
+      customer_support:
+        description: "Customer support"
+        privileges:
+          chinook_music: [CONNECT, EXECUTE]
+
+
+# Roles and their privileges per database are declared in `vars: denodo: security:`
+# above; this hook applies them (and converges) at the start of every invocation.
+on-run-start:
+  - "{{ denodo_apply_roles() }}"
+
+models:
+  chinook_music:
+    +materialized: view
+    +database: chinook_music
+    # The `description:` of the YAML is written into Denodo on every build (a CREATE OR
+    # REPLACE would otherwise wipe it): Data Catalog, BI tools and MCP Server read it.
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +database: chinook_music_staging
+    marts:
+      # Governance is declared in the _models.yml (tags on the view / the columns), not
+      # in the SQL: this single hook applies it to every published model.
+      +post_hook: "{{ denodo_apply_tags() }}"

@@ -1,0 +1,60 @@
+# Data product FINANCE: the FOURTH product, added after the governance is in place.
+# It is not part of `run_demo.py --all`: `python run_demo.py --add-product` builds it,
+# to show what a new data product costs once tags and policies exist.
+#
+# Like Analytics it is a consumption product: one database (chinook_finance), no raw
+# layer, inputs declared as `sources`.
+#
+# What this file says about security: WHO MAY ENTER, and nothing else. No tag, no
+# policy: the columns it reads are already tagged by the products that own them, and
+# the Global Security Policies follow them here.
+name: chinook_finance
+version: "1.0.0"
+config-version: 2
+
+profile: denodo
+
+macro-paths: ["../../../dbt-denodo-extras/macros"]
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  denodo:
+    folders:
+      integration: "/30 Integration views"
+
+    security:
+
+      chinook_finance_developer:
+        description: "Developer of the Finance data product"
+        privileges:
+          chinook_finance: [CONNECT, METADATA]
+        granted_to: [denodo_developer_global]
+
+      # Roles that already exist: this product only opens its door to them.
+      sales_rep:
+        description: "Sales rep"
+        privileges:
+          chinook_finance: [CONNECT, EXECUTE]
+
+      analyst:
+        description: "BI analyst"
+        privileges:
+          chinook_finance: [CONNECT, EXECUTE]
+
+      customer_support:
+        description: "Customer support"
+        privileges:
+          chinook_finance: [CONNECT, EXECUTE]
+
+on-run-start:
+  - "{{ denodo_apply_roles() }}"
+
+models:
+  chinook_finance:
+    +materialized: view
+    +database: chinook_finance
+    +persist_docs:
+      relation: true
+      columns: true

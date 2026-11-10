@@ -1,0 +1,15 @@
+# local configuration: credentials, never committed
+demo.env
+drivers/
+
+# dbt build artefacts
+dbt/.user.yml
+dbt/*/target/
+dbt/*/dbt_packages/
+dbt/*/logs/
+logs/
+
+# python
+__pycache__/
+*.pyc
+.venv/

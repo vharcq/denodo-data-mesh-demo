@@ -1,0 +1,54 @@
+version: 2
+
+# GOLD layer: what the data product PUBLISHES.
+#
+# Descriptions: written for the people (and the tools) that consume the view. With
+# `+persist_docs` (dbt_project.yml) they are written into Denodo on every build, where
+# the Data Catalog, BI tools and the Denodo MCP Server read them.
+#
+# Governance: Denodo tags are declared HERE, under `config: tags:`, on the view as well
+# as on the columns. The `denodo_apply_tags` hook (dbt_project.yml, marts level) applies
+# them after every build, and DETACHES the ones removed from here.
+# /!\ Always under `config:`: at MODEL level, a bare `tags:` property is silently
+# ignored by dbt (measured: the DENY on iv_sales went away without any error).
+# `contract: enforced: true` = schema check (dbt-core): dbt compares the columns produced
+# by the SELECT with the ones declared here BEFORE replacing the view. A published column
+# that disappears breaks the build HERE, at the producer. Columns are checked, types are
+# not (measured on dbt-denodo 1.0.0).
+
+models:
+  - name: iv_catalog
+    description: "Music catalogue: one row per track, with its album, artist and record label, its selling price and its purchase cost. Published by the Music data product."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: track_id
+        data_type: integer
+        description: "Track identifier. Unique."
+        data_tests: [unique, not_null]
+      - name: track_title
+        data_type: varchar
+        description: "Title of the track."
+      - name: album_title
+        data_type: varchar
+        description: "Title of the album the track belongs to."
+      - name: artist_name
+        data_type: varchar
+        description: "Name of the artist of the album."
+      - name: label_id
+        data_type: integer
+        description: "Identifier of the record label that publishes the artist."
+        config:
+          tags: [scope_label]
+      - name: label_name
+        data_type: varchar
+        description: "Name of the record label, for example Blue Note or Motown."
+      - name: unit_price
+        data_type: decimal
+        description: "Selling price of one unit of the track, in euros."
+      - name: cost_price
+        data_type: decimal
+        description: "Purchase cost of one unit of the track, in euros. Confidential."
+        config:
+          tags: [class_cost]

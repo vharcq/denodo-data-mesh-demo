@@ -1,0 +1,10 @@
+# Everything the demo needs, except the Denodo adapter itself (see below).
+#   pip install -r requirements.txt
+#   pip install dbt-denodo==1.0.0 --no-deps
+#
+# Why the second line: dbt-denodo 1.0.0 (Denodo's official adapter) pins
+# dbt-core~=1.11. The demo runs on the latest dbt-core; --no-deps keeps it.
+dbt-core==1.12.6
+psycopg2-binary==2.9.12
+JayDeBeApi==1.2.3
+JPype1==1.7.1

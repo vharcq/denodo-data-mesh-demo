@@ -1,0 +1,38 @@
+-- Demo users (NON-admin: administrators are never restricted by Global Security
+-- Policies) and the pre-existing "umbrella" role.
+--
+-- Split of responsibilities with dbt:
+--   - the business ROLES and their privileges per database are declared in the YAML of
+--     the dbt projects (`vars: denodo: security:`) and created by `dbt build`;
+--   - this file only creates the USERS: no business role, no GRANT on a database;
+--   - the user -> role assignment lives in `80_user_roles.vql`, applied AFTER dbt
+--     (`python run_demo.py --post`): the roles do not exist before the first build.
+--
+-- Idempotent: on a re-deploy, run_demo.py skips the CREATE USER of a user that already
+-- exists (password kept). CREATE OR REPLACE USER is NOT used: it resets the password
+-- and runs into the password re-use policy.
+CONNECT DATABASE admin;
+
+-- Umbrella role. In a real organisation this role ALREADY EXISTS before any data
+-- product: it is created here only because the demo starts from an empty server.
+-- It holds real people (the platform developers), belongs to the central security
+-- team, and sits ABOVE the data products: none of them creates, modifies or owns it.
+-- Each dbt project plugs its own developer role INTO it through `granted_to`, so a
+-- member of this role automatically sees every new product's lineage.
+-- dbt never creates it: it fails explicitly when the role is missing.
+CREATE ROLE denodo_developer_global 'Platform developers (umbrella role, outside dbt)';
+
+-- Passwords: the @PWD@ placeholder is replaced by run_demo.py with DEMO_USERS_PASSWORD
+-- from demo.env (git-ignored): no secret in the repository. For a manual deployment in
+-- the VQL Shell, replace @PWD@ with a password that satisfies the policy (upper + lower
+-- case, a digit, a special character, no 3 consecutive digits).
+CREATE USER buyer_blue    '@PWD@' SHA512 'Buyer, Blue Note label';
+CREATE USER buyer_red     '@PWD@' SHA512 'Buyer, Motown label';
+CREATE USER rep_alice     '@PWD@' SHA512 'Sales rep Alice';
+CREATE USER rep_ben       '@PWD@' SHA512 'Sales rep Ben';
+CREATE USER analyst_bob   '@PWD@' SHA512 'BI analyst';
+CREATE USER support_sarah '@PWD@' SHA512 'Customer support';
+CREATE USER dev_global    '@PWD@' SHA512 'Platform developer (umbrella role)';
+
+-- The only assignment possible before dbt: the umbrella role already exists here.
+ALTER USER dev_global GRANT ROLE denodo_developer_global;

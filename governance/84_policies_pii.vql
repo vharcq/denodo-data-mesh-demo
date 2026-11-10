@@ -1,0 +1,19 @@
+-- Personal data / GDPR: a STRONG rule. The e-mail is masked for EVERYONE...
+-- ...EXCEPT the customer_support role, which has a legitimate business need.
+--
+-- How to carve an exception into a strong rule: Global Security Policies combine with
+-- AND, so a second policy can NEVER unmask what a first one masked. The exception goes
+-- INTO THE AUDIENCE of the rule: NOT_IN ROLES (customer_support) means the rule applies
+-- to everyone whose roles are not customer_support; customer support never triggers it.
+--
+-- Unconditional masking: FILTER '1 = 0' (no row in clear). The class_pii tag sits on
+-- the GOLD column chinook_sales.iv_invoices.email, so the e-mail is masked wherever it
+-- appears downstream.
+CONNECT DATABASE admin;
+
+CREATE OR REPLACE GLOBAL_SECURITY_POLICY p_mask_email_pii
+  DESCRIPTION = 'E-mail (personal data) masked for everyone except customer support'
+  ENABLED = TRUE
+  AUDIENCE    ( NOT_IN ROLES ( customer_support ) )
+  ELEMENTS    ( COLUMNS TAGGED ANY ( class_pii ) )
+  RESTRICTION ( FILTER = '1 = 0' MASKING ANY ( class_pii ) WITH ( DEFAULT ) );

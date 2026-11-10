@@ -1,0 +1,43 @@
+version: 2
+
+# STAGING layer: one stg_ per bv_, cast + rename, no logic.
+# These views are NOT exposed: no consumer role has access to this database.
+#
+# Tests: `unique` / `not_null` on every key, and `relationships` on every foreign key:
+# an invoice points to an existing customer, a line to an existing invoice. Denodo
+# declares no foreign key on these sources; the build proves it.
+
+models:
+  - name: stg_invoice
+    description: "chinook_sales_staging.stg_invoice - plain cast of bv_invoice."
+    columns:
+      - name: invoice_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customer')
+                field: customer_id
+
+  - name: stg_customer
+    description: "chinook_sales_staging.stg_customer - plain cast of bv_customer."
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+
+  - name: stg_invoice_line
+    description: "chinook_sales_staging.stg_invoice_line - plain cast of bv_invoice_line."
+    columns:
+      - name: line_id
+        data_tests: [unique, not_null]
+      - name: invoice_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_invoice')
+                field: invoice_id
+
+  # The published contracts of the Sales data product are in models/marts/_models.yml.

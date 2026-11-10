@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  # The base views of the raw layer, created in VQL (platform/10_music_staging.vql):
+  # dbt does not create them.
+  - name: bv_csv_music
+    database: chinook_music_staging
+    schema: chinook_music_staging       # == database: required by the catalog (otherwise dbt derives it from the source NAME)
+    description: "Music staging - CSV base views (never exposed to consumers)."
+    tables:
+      - name: bv_album
+      - name: bv_artist
+      - name: bv_label
+      - name: bv_track

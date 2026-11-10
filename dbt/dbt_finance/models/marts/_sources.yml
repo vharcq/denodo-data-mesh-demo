@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: music_product
+    database: chinook_music
+    schema: chinook_music
+    description: "Music data product - published view."
+    tables:
+      - name: iv_catalog
+  - name: sales_product
+    database: chinook_sales
+    schema: chinook_sales
+    description: "Sales data product - published views."
+    tables:
+      - name: iv_invoices
+      - name: iv_invoice_line

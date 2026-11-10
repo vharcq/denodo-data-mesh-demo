@@ -1,0 +1,16 @@
+-- DENY: the "hard" restriction. Unlike masking and row filtering (soft: they return
+-- redacted or filtered data), DENY refuses the execution outright: the user gets a
+-- privilege ERROR.
+--
+-- Scenario: the BI analyst works on aggregates. The transactional detail iv_sales
+-- (purchase cost + customer, tagged class_confidential) is FORBIDDEN to them. The buyer
+-- can read it (with the cost masked outside their labels): the DENY only targets the
+-- analyst role.
+CONNECT DATABASE admin;
+
+CREATE OR REPLACE GLOBAL_SECURITY_POLICY p_deny_sales_analyst
+  DESCRIPTION = 'Analyst: access denied to the sales detail (class_confidential)'
+  ENABLED = TRUE
+  AUDIENCE    ( ANY ROLES ( analyst ) )
+  ELEMENTS    ( VIEWS TAGGED ANY ( class_confidential ) )
+  RESTRICTION ( DENY );

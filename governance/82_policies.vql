@@ -1,0 +1,49 @@
+-- Global Security Policies: governance defined ONCE per tag, applied everywhere
+-- (including through chinook_analytics, because Denodo checks every view of the
+-- query tree, across databases).
+--
+-- Numbered 8x = POST phase (`python run_demo.py --post`), i.e. AFTER `dbt build`: a
+-- policy names ROLES in its AUDIENCE, and the roles are created by dbt
+-- (`vars: denodo: security:`). Deployed before, it fails.
+-- Semantics reminder: inside FILTER, a bare identifier is a TAG; the sub-query is plain
+-- SQL; FILTER describes the rows KEPT / shown IN CLEAR.
+-- Masking: a masked column is returned as NULL. `WITH ( DEFAULT )` is needed on VDP
+-- 9.4.7: the documented grammar stops at `MASKING ANY ( <tags> )`, but without the
+-- WITH clause the server answers a syntax error. Measured: whatever expression is
+-- written there (DEFAULT, HIDE, REDACT_ASTERISK), the value comes back as NULL and
+-- DESC VQL shows the policy without it.
+CONNECT DATABASE admin;
+
+-- Governance of the COST (class_cost), in TWO "secure by default" layers:
+--   1a) baseline: masked for EVERY role that is not buyer (NOT_IN), so a new role is
+--       restricted automatically (no leak). 1b) the buyer gets a CONDITIONAL masking
+--       (they see the cost of THEIR labels). The two audiences are disjoint.
+
+-- 1a) SECURE BY DEFAULT: cost masked for every role EXCEPT buyer.
+CREATE OR REPLACE GLOBAL_SECURITY_POLICY p_cost_default_deny
+  DESCRIPTION = 'Cost masked by default for everyone except the buyer role'
+  ENABLED = TRUE
+  AUDIENCE    ( NOT_IN ROLES ( buyer ) )
+  ELEMENTS    ( COLUMNS TAGGED ANY ( class_cost ) )
+  RESTRICTION ( FILTER = '1 = 0' MASKING ANY ( class_cost ) WITH ( DEFAULT ) );
+
+-- 1b) BUYER: sees the WHOLE catalogue, but the purchase cost is masked (-> NULL) on the
+--     tracks that are NOT from their labels. The key is derived from the connected user.
+CREATE OR REPLACE GLOBAL_SECURITY_POLICY p_buyer_cost_mask
+  DESCRIPTION = 'Buyer: full catalogue, purchase cost masked outside their own labels'
+  ENABLED = TRUE
+  AUDIENCE    ( ANY ROLES ( buyer ) )
+  ELEMENTS    ( COLUMNS TAGGED ANY ( class_cost ) )
+  RESTRICTION ( FILTER = 'scope_label IN (SELECT label_id FROM chinook_security_staging.bv_buyer_label
+                          WHERE username = GETSESSION(''user''))'
+                MASKING ANY ( class_cost ) WITH ( DEFAULT ) );
+
+-- 2) SALES REP: only sees the invoices of THEIR customers (row level).
+CREATE OR REPLACE GLOBAL_SECURITY_POLICY p_salesrep_own_customers
+  DESCRIPTION = 'Sales rep: only the invoices of their own customers'
+  ENABLED = TRUE
+  AUDIENCE    ( ANY ROLES ( sales_rep ) )
+  ELEMENTS    ( COLUMNS TAGGED ANY ( scope_customer ) )
+  RESTRICTION ( FILTER = 'scope_customer IN (SELECT customer_id FROM chinook_security_staging.bv_salesrep_customer
+                          WHERE username = GETSESSION(''user''))'
+                REJECT );

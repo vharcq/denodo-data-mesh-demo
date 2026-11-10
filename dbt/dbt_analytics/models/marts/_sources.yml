@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  # The gold databases of the OTHER data products. A ref() does not cross dbt projects:
+  # each product is independent, so its inputs are `sources`.
+  #
+  # DIRECT read of the remote views: possible because the three projects share the
+  # `view` materialization of dbt-denodo-extras (CREATE OR REPLACE, no DROP). Facing a
+  # producer you do not control, or a gold built with materialized='table' (which always
+  # drops), you would read through an import port instead: a local interface view.
+  - name: music_product
+    database: chinook_music
+    schema: chinook_music
+    description: "Music data product - published view."
+    tables:
+      - name: iv_catalog
+  - name: sales_product
+    database: chinook_sales
+    schema: chinook_sales
+    description: "Sales data product - published views."
+    tables:
+      - name: iv_invoices
+      - name: iv_invoice_line

@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  # The base views of the raw layer, created in VQL (platform/12_sales_staging.vql):
+  # dbt does not create them.
+  - name: bv_csv_sales
+    database: chinook_sales_staging
+    schema: chinook_sales_staging       # == database: required by the catalog (otherwise dbt derives it from the source NAME)
+    description: "Sales staging - CSV base views (never exposed to consumers)."
+    tables:
+      - name: bv_customer
+      - name: bv_invoice
+      - name: bv_invoice_line

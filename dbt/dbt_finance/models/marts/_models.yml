@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: iv_customer_statement
+    description: "Customer statement: one row per invoice line, with the customer's contact e-mail, the track sold, its price and its purchase cost. Published by the Finance data product."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: invoice_id
+        data_type: integer
+        description: "Invoice identifier."
+        data_tests: [not_null]
+      - name: customer_id
+        data_type: integer
+        description: "Identifier of the customer who was invoiced."
+        data_tests: [not_null]
+      - name: customer_name
+        data_type: varchar
+        description: "Full name of the customer."
+      - name: email
+        data_type: varchar
+        description: "Contact e-mail of the customer. Personal data."
+      - name: label_name
+        data_type: varchar
+        description: "Name of the record label of the track."
+      - name: track_title
+        data_type: varchar
+        description: "Title of the track sold."
+      - name: quantity
+        data_type: integer
+        description: "Number of units sold on the invoice line."
+      - name: unit_price
+        data_type: decimal
+        description: "Selling price of one unit of the track, in euros."
+      - name: cost_price
+        data_type: decimal
+        description: "Purchase cost of one unit of the track, in euros. Confidential."

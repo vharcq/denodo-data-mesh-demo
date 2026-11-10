@@ -1,0 +1,34 @@
+-- Tags are the governance "concepts". This file only DECLARES them: their ATTACHMENT
+-- to the gold views and columns is declared in each dbt project's YAML
+-- (`config: tags:`) and applied by dbt on every build, through the `denodo_apply_tags`
+-- post-hook (dbt-denodo-extras/macros/denodo_custom_macros.sql).
+--
+-- Why: a tag is attached to a view or to one of its columns, and the gold views are
+-- produced by dbt. The attachment therefore lives with the model that owns the column,
+-- reviewed with it, and it converges on every build (a tag removed from the YAML is
+-- detached). The tag lives in VQL, the attachment lives with the view.
+--
+-- The policies (82_, 84_, 86_) only reference these tags. They are deployed in the
+-- POST phase anyway, because their AUDIENCE names roles that dbt creates.
+CONNECT DATABASE admin;
+
+-- purchase cost: confidential, masked for a buyer outside their own labels
+-- -> attached to chinook_music.iv_catalog.cost_price by dbt
+CREATE OR REPLACE TAG class_cost DESCRIPTION = 'Purchase cost - confidential';
+
+-- label key: the row criterion of the cost masking (a buyer sees the cost on THEIR labels)
+-- -> attached to chinook_music.iv_catalog.label_id by dbt
+CREATE OR REPLACE TAG scope_label DESCRIPTION = 'Label key used for filtering';
+
+-- customer key: a sales rep only sees the invoices of THEIR customers
+-- -> attached to chinook_sales.iv_invoices.customer_id by dbt
+CREATE OR REPLACE TAG scope_customer DESCRIPTION = 'Customer key used for filtering';
+
+-- confidential view: transactional detail forbidden to some roles (DENY policy).
+-- Tag set on the WHOLE view -> attached to chinook_analytics.iv_sales by dbt.
+CREATE OR REPLACE TAG class_confidential DESCRIPTION = 'Confidential view (restricted access)';
+
+-- personal data (e-mail): tagged on the published GOLD column. The source bv_customer
+-- lives in chinook_sales_staging (never exposed): governance lives in the gold.
+-- -> attached to chinook_sales.iv_invoices.email by dbt.
+CREATE OR REPLACE TAG class_pii DESCRIPTION = 'Personal data (GDPR)';

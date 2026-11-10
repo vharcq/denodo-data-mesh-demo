@@ -1,0 +1,89 @@
+# Data product SALES: chinook_sales_staging (raw) + chinook_sales (gold).
+name: chinook_sales
+version: "1.0.0"
+config-version: 2
+
+profile: denodo
+
+# Macros shared by the 3 projects, read from the dbt-denodo-extras repository cloned
+# NEXT TO this one (../../../ = the folder holding both clones). `macro-paths` lists
+# the folders where dbt looks for macros: these files count as this project's own.
+# Not a dbt package on purpose: dbt silently ignores a materialization or a
+# `generate_*_name` that comes from a package.
+macro-paths: ["../../../dbt-denodo-extras/macros"]
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Everything Denodo-specific lives under one namespace, so that the project's other
+  # vars stay readable next to it.
+  denodo:
+
+    # VQL folders. Numbered convention of the project: 10/20 are created by the VQL
+    # (datasources, base views), dbt writes into 30/40/50.
+    # /!\ `var()` CANNOT be resolved in this file (dbt renders it before loading its
+    # vars): the folder is set in the config() of each model.
+    folders:
+      integration:       "/30 Integration views"
+      business_entities: "/40 Business Entities"
+      reporting:         "/50 Reporting Views"
+
+    # Governance tags dbt is allowed to manage (whitelist). See
+    # denodo_custom_macros.sql -> denodo_apply_tags: it FILTERS (dbt `tags` are selectors
+    # first) and makes CONVERGENCE possible (a tag removed from the YAML is really
+    # detached). The tags themselves are created in VQL (governance/20_tags.vql).
+    governance_tags:
+      - class_cost
+      - scope_label
+      - scope_customer
+      - class_pii
+      - class_confidential
+
+    # DATABASE <-> ROLE (see denodo_custom_macros.sql -> denodo_apply_roles).
+    security:
+
+      chinook_sales_developer:
+        description: "Developer of the Sales data product"
+        privileges:
+          chinook_sales_staging: [CONNECT, METADATA]
+          chinook_sales:         [CONNECT, METADATA]
+        granted_to: [denodo_developer_global]
+
+      sales_rep:
+        description: "Sales rep: invoices of their own customers"
+        privileges:
+          chinook_sales: [CONNECT, EXECUTE]
+
+      customer_support:
+        description: "Customer support: personal data exception"
+        privileges:
+          chinook_sales: [CONNECT, EXECUTE]
+
+      analyst:
+        description: "BI analyst"
+        privileges:
+          chinook_sales: [CONNECT, EXECUTE]
+
+
+# Roles and their privileges per database are declared in `vars: denodo: security:`
+# above; this hook applies them (and converges) at the start of every invocation.
+on-run-start:
+  - "{{ denodo_apply_roles() }}"
+
+models:
+  chinook_sales:
+    +materialized: view
+    +database: chinook_sales
+    # The YAML `description:` fields are written into Denodo on every build (a
+    # CREATE OR REPLACE would wipe them otherwise): the Data Catalog, BI tools and the
+    # Denodo MCP Server read them from there.
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +database: chinook_sales_staging
+    marts:
+      # Governance is declared in the _models.yml (tags on the view / the columns), not
+      # in the SQL: this single hook applies it to every published model.
+      +post_hook: "{{ denodo_apply_tags() }}"

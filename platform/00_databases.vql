@@ -1,0 +1,19 @@
+-- Chinook data-mesh demo: 6 virtual databases. A STAGING layer (never exposed),
+-- a GOLD layer (the published data products), and one internal database for the
+-- security mappings.
+--
+--   chinook_music_staging  -+ (ds_ + bv_)            chinook_sales_staging -+ (ds_ + bv_)
+--                           +-> chinook_music (gold)                        +-> chinook_sales (gold)
+--                                     +------------> chinook_analytics (gold, consumption)
+--   chinook_security_staging  (identity mappings, internal, never exposed)
+--
+-- Strict rule: ds_ and bv_ NEVER live in a gold database, always in a *_staging one.
+-- A gold database only holds published views. Consumers get EXECUTE on the GOLD
+-- databases only, never on *_staging: the gold reads its staging through indirect access.
+-- (chinook_analytics is pure gold: no source, only joins of other golds, so no staging.)
+CREATE DATABASE chinook_music_staging;
+CREATE DATABASE chinook_music;
+CREATE DATABASE chinook_sales_staging;
+CREATE DATABASE chinook_sales;
+CREATE DATABASE chinook_security_staging;
+CREATE DATABASE chinook_analytics;
