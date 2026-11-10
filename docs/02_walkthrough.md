@@ -2,6 +2,8 @@
 
 **Global Security Policies declared, reviewed and audited with dbt.**
 
+*Vincent Harcq (vincent.harcq@contraste.com), Contraste Europe*
+
 ## Summary
 
 Denodo's tags and Global Security Policies let a security team write a rule once ("personal data is masked for everyone except customer support") and have it applied wherever the data goes. This paper shows how to build a governed set of data products around them, step by step, with every definition kept in text files: the data model, the descriptions, the tests, the roles and the tags. The files are reviewed like code and deployed by one command, using dbt and Denodo's official dbt adapter.
@@ -205,7 +207,7 @@ Two public repositories contain everything used here. They are meant to be clone
 
 | Repository | Content |
 |---|---|
-| `denodo-data-mesh-demo` | The example: sources, the four data products, tags, policies, and a script that deploys and checks each step. Its `docs/03_demo-script.md` replays this walkthrough command by command. |
-| `dbt-denodo-extras` | The reusable part: the dbt macros that declare roles and tags from a project and run the audit. |
+| [github.com/vharcq/denodo-data-mesh-demo](https://github.com/vharcq/denodo-data-mesh-demo) | The example: sources, the four data products, tags, policies, and a script that deploys and checks each step. Its demo script (`docs/03_demo-script.md`) replays this walkthrough command by command. |
+| [github.com/vharcq/dbt-denodo-extras](https://github.com/vharcq/dbt-denodo-extras) | The reusable part: the dbt macros that declare roles and tags from a project and run the audit. |
 
 Verified on Denodo Platform 9.4.7 with dbt-core 1.12.6 and Denodo's official adapter `dbt-denodo` 1.0.0.

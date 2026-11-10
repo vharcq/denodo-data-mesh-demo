@@ -21,7 +21,7 @@ About ten minutes of commands. Count twenty-five to thirty minutes with the expl
 
 ## Before you start
 
-- The setup of the [README](../README.md#setup) is done: both repositories cloned side by side, `demo.env` filled in, the Python environment active (`dbt --version` answers).
+- The setup of the [README](../README.md#setup) is done: both repositories ([denodo-data-mesh-demo](https://github.com/vharcq/denodo-data-mesh-demo) and [dbt-denodo-extras](https://github.com/vharcq/dbt-denodo-extras)) cloned side by side, `demo.env` filled in, the Python environment active (`dbt --version` answers).
 - One terminal, opened in the folder of this repository, with a font large enough to be read from the back of the room.
 - Design Studio open in a browser, logged in as an administrator.
 - The file `data/invoice_line.csv` open in a text editor (used in step 1).
