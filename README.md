@@ -380,7 +380,7 @@ The identity of the caller comes from `GETSESSION('user')`, looked up in mapping
 | cache enabled on a dbt view | lost (`cache_status` 3 -> 0): use `materialized='table'` |
 | whitelisted tag attached by hand | detached (that is the convergence) |
 | database privilege of a declared role changed | realigned |
-| view built on top of a `table` model | destroyed: that materialization always drops and recreates |
+| view built on top of a `table` model | survives: the `table` materialization of `dbt-denodo-extras` modifies the view in place (the adapter's own drops and recreates it) |
 | view built on top of a `view` model | survives |
 | tag outside the whitelist | kept, invisible to the YAML, reported by the audit |
 | database privilege of an undeclared role | kept, reported by the audit |
@@ -388,7 +388,7 @@ The identity of the caller comes from `GETSESSION('user')`, looked up in mapping
 | privilege granted **directly to a user** | kept, and the policies written on roles do not restrict it: reported by the audit |
 | model deleted from the project | the view stays behind: reported by the audit |
 
-**`materialized='table'` reads the source.** It loads the cache on every run: fine on this demo, a real load on a production source. A `table` model downstream of another product is also not refreshed when the producer rebuilds: after a producer build, rebuild its consumers. That is the price of independent projects, and it is paid in the scheduler, not in the code.
+**`materialized='table'` reads the source.** It loads the cache on every run: fine on this demo, a real load on a production source. With `config(cache_preload=false)` the build only defines the view and its cache, and a Scheduler job loads it (with retries, for a source that fails now and then); the data cached before the build is still served after it. A `table` model downstream of another product is also not refreshed when the producer rebuilds: after a producer build, rebuild its consumers. That is the price of independent projects, and it is paid in the scheduler, not in the code.
 
 **Contracts.** `contract: enforced: true` on the published views makes a missing column fail the build at the producer, with a diff, instead of surfacing as a broken view at the consumer. On this adapter the columns are compared, not their types, and a decimal is declared as a bare `decimal` (the exact precision lives in the `cast` of the staging model).
 
